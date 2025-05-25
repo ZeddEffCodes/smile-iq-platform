@@ -1,0 +1,678 @@
+"""
+Dental Practice Data Extraction and Analysis System
+==================================================
+
+A comprehensive system for extracting, aggregating, and analyzing dental practice data
+to provide market insights for dental professionals and investors.
+
+Features:
+- Data extraction from multiple sources
+- ML-based trend prediction
+- Performance-optimized aggregation
+- RESTful API endpoints for frontend integration
+"""
+
+import pandas as pd
+import numpy as np
+import sqlite3
+import requests
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
+import logging
+import asyncio
+import aiohttp
+from concurrent.futures import ThreadPoolExecutor
+import json
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+@dataclass
+class PracticeData:
+    """Data structure for dental practice information"""
+    practice_id: str
+    name: str
+    postcode: str
+    latitude: float
+    longitude: float
+    practice_type: str  # NHS, Private, Mixed
+    dentist_count: int
+    established_year: int
+    patient_capacity: int
+    services: List[str]
+    rating: float
+    reviews_count: int
+    last_updated: datetime
+
+@dataclass
+class DemographicData:
+    """Demographic data for market analysis"""
+    postcode: str
+    population: int
+    age_0_17: int
+    age_18_64: int
+    age_65_plus: int
+    median_income: float
+    house_prices_avg: float
+    house_sales_last_year: int
+    population_growth_rate: float
+
+@dataclass
+class MarketInsights:
+    """Market analysis results"""
+    postcode: str
+    practice_density: float  # practices per 1000 residents
+    competition_level: str   # Low, Medium, High
+    demographic_score: float
+    growth_potential: float
+    predicted_demand: float
+    risk_factors: List[str]
+    opportunities: List[str]
+
+class DataExtractor:
+    """Handles data extraction from various sources"""
+    
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'DentalMarketAnalyzer/1.0'
+        })
+    
+    async def extract_practice_data(self, postcodes: List[str]) -> List[PracticeData]:
+        """
+        Extract dental practice data for given postcodes
+        Uses multiple data sources including NHS database, Google Places, etc.
+        """
+        practices = []
+        
+        async with aiohttp.ClientSession() as session:
+            tasks = [self._fetch_practices_for_postcode(session, pc) for pc in postcodes]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            for result in results:
+                if not isinstance(result, Exception):
+                    practices.extend(result)
+        
+        logger.info(f"Extracted {len(practices)} practices from {len(postcodes)} postcodes")
+        return practices
+    
+    async def _fetch_practices_for_postcode(self, session: aiohttp.ClientSession, 
+                                          postcode: str) -> List[PracticeData]:
+        """Fetch practices for a specific postcode"""
+        # Simulate API calls to various data sources
+        practices = []
+        
+        # NHS Practice Database (simulated)
+        nhs_practices = await self._fetch_nhs_practices(session, postcode)
+        practices.extend(nhs_practices)
+        
+        # Google Places API (simulated)
+        google_practices = await self._fetch_google_places(session, postcode)
+        practices.extend(google_practices)
+        
+        return self._deduplicate_practices(practices)
+    
+    async def _fetch_nhs_practices(self, session: aiohttp.ClientSession, 
+                                 postcode: str) -> List[PracticeData]:
+        """Simulate NHS database extraction"""
+        # In real implementation, this would call NHS API
+        await asyncio.sleep(0.1)  # Simulate network delay
+        
+        # Generate dummy data for demonstration
+        practices = []
+        for i in range(np.random.randint(1, 4)):
+            practice = PracticeData(
+                practice_id=f"NHS_{postcode}_{i}",
+                name=f"{postcode} Dental Centre {i+1}",
+                postcode=postcode,
+                latitude=51.5074 + np.random.uniform(-0.1, 0.1),
+                longitude=-0.1278 + np.random.uniform(-0.1, 0.1),
+                practice_type="NHS",
+                dentist_count=np.random.randint(2, 8),
+                established_year=np.random.randint(1980, 2020),
+                patient_capacity=np.random.randint(1000, 5000),
+                services=['General Dentistry', 'NHS Emergency'],
+                rating=np.random.uniform(3.5, 4.8),
+                reviews_count=np.random.randint(50, 300),
+                last_updated=datetime.now()
+            )
+            practices.append(practice)
+        
+        return practices
+    
+    async def _fetch_google_places(self, session: aiohttp.ClientSession, 
+                                 postcode: str) -> List[PracticeData]:
+        """Simulate Google Places API extraction"""
+        await asyncio.sleep(0.1)
+        
+        practices = []
+        for i in range(np.random.randint(1, 3)):
+            practice = PracticeData(
+                practice_id=f"PRIV_{postcode}_{i}",
+                name=f"{postcode} Private Dental {i+1}",
+                postcode=postcode,
+                latitude=51.5074 + np.random.uniform(-0.1, 0.1),
+                longitude=-0.1278 + np.random.uniform(-0.1, 0.1),
+                practice_type="Private",
+                dentist_count=np.random.randint(1, 5),
+                established_year=np.random.randint(1990, 2023),
+                patient_capacity=np.random.randint(500, 2000),
+                services=['Cosmetic Dentistry', 'Orthodontics', 'Implants'],
+                rating=np.random.uniform(4.0, 5.0),
+                reviews_count=np.random.randint(20, 150),
+                last_updated=datetime.now()
+            )
+            practices.append(practice)
+        
+        return practices
+    
+    def _deduplicate_practices(self, practices: List[PracticeData]) -> List[PracticeData]:
+        """Remove duplicate practices based on name and location"""
+        seen = set()
+        unique_practices = []
+        
+        for practice in practices:
+            key = (practice.name.lower(), practice.postcode, 
+                  round(practice.latitude, 4), round(practice.longitude, 4))
+            if key not in seen:
+                seen.add(key)
+                unique_practices.append(practice)
+        
+        return unique_practices
+
+class DemographicAnalyzer:
+    """Analyzes demographic data for market insights"""
+    
+    def __init__(self):
+        self.scaler = StandardScaler()
+    
+    async def get_demographic_data(self, postcodes: List[str]) -> List[DemographicData]:
+        """Extract demographic data for postcodes"""
+        demographic_data = []
+        
+        for postcode in postcodes:
+            # Simulate ONS/Census data extraction
+            data = DemographicData(
+                postcode=postcode,
+                population=np.random.randint(5000, 50000),
+                age_0_17=np.random.randint(800, 8000),
+                age_18_64=np.random.randint(3000, 30000),
+                age_65_plus=np.random.randint(500, 8000),
+                median_income=np.random.uniform(25000, 65000),
+                house_prices_avg=np.random.uniform(200000, 800000),
+                house_sales_last_year=np.random.randint(50, 500),
+                population_growth_rate=np.random.uniform(-0.02, 0.05)
+            )
+            demographic_data.append(data)
+        
+        logger.info(f"Extracted demographic data for {len(postcodes)} postcodes")
+        return demographic_data
+
+class MLPredictor:
+    """Machine learning models for demand prediction"""
+    
+    def __init__(self):
+        self.demand_model = RandomForestRegressor(n_estimators=100, random_state=42)
+        self.scaler = StandardScaler()
+        self.is_trained = False
+    
+    def train_demand_model(self, practices: List[PracticeData], 
+                         demographics: List[DemographicData]):
+        """Train ML model to predict dental demand"""
+        # Prepare training data
+        features, targets = self._prepare_training_data(practices, demographics)
+        
+        if len(features) == 0:
+            logger.warning("No training data available")
+            return
+        
+        # Scale features
+        features_scaled = self.scaler.fit_transform(features)
+        
+        # Train model
+        self.demand_model.fit(features_scaled, targets)
+        self.is_trained = True
+        
+        logger.info(f"Trained demand prediction model with {len(features)} samples")
+    
+    def _prepare_training_data(self, practices: List[PracticeData], 
+                             demographics: List[DemographicData]) -> Tuple[np.ndarray, np.ndarray]:
+        """Prepare training data from practices and demographics"""
+        # Group practices by postcode
+        practice_counts = {}
+        for practice in practices:
+            if practice.postcode not in practice_counts:
+                practice_counts[practice.postcode] = 0
+            practice_counts[practice.postcode] += 1
+        
+        features = []
+        targets = []
+        
+        for demo in demographics:
+            if demo.postcode in practice_counts:
+                # Feature engineering
+                elderly_ratio = demo.age_65_plus / demo.population
+                young_ratio = demo.age_0_17 / demo.population
+                income_scaled = demo.median_income / 1000
+                price_income_ratio = demo.house_prices_avg / demo.median_income
+                
+                feature_vector = [
+                    demo.population,
+                    elderly_ratio,
+                    young_ratio,
+                    income_scaled,
+                    price_income_ratio,
+                    demo.population_growth_rate,
+                    demo.house_sales_last_year
+                ]
+                
+                features.append(feature_vector)
+                targets.append(practice_counts[demo.postcode])
+        
+        return np.array(features), np.array(targets)
+    
+    def predict_demand(self, demographic: DemographicData) -> float:
+        """Predict dental demand for a postcode"""
+        if not self.is_trained:
+            logger.warning("Model not trained yet")
+            return 0.0
+        
+        # Prepare feature vector
+        elderly_ratio = demographic.age_65_plus / demographic.population
+        young_ratio = demographic.age_0_17 / demographic.population
+        income_scaled = demographic.median_income / 1000
+        price_income_ratio = demographic.house_prices_avg / demographic.median_income
+        
+        features = np.array([[
+            demographic.population,
+            elderly_ratio,
+            young_ratio,
+            income_scaled,
+            price_income_ratio,
+            demographic.population_growth_rate,
+            demographic.house_sales_last_year
+        ]])
+        
+        features_scaled = self.scaler.transform(features)
+        prediction = self.demand_model.predict(features_scaled)[0]
+        
+        return max(0, prediction)
+
+class MarketAnalyzer:
+    """Analyzes market conditions and generates insights"""
+    
+    def __init__(self):
+        self.predictor = MLPredictor()
+    
+    def analyze_market(self, practices: List[PracticeData], 
+                      demographics: List[DemographicData]) -> List[MarketInsights]:
+        """Comprehensive market analysis"""
+        # Train ML model
+        self.predictor.train_demand_model(practices, demographics)
+        
+        insights = []
+        
+        # Group practices by postcode
+        practice_groups = {}
+        for practice in practices:
+            if practice.postcode not in practice_groups:
+                practice_groups[practice.postcode] = []
+            practice_groups[practice.postcode].append(practice)
+        
+        # Analyze each postcode
+        for demographic in demographics:
+            postcode = demographic.postcode
+            postcode_practices = practice_groups.get(postcode, [])
+            
+            insight = self._analyze_postcode(demographic, postcode_practices)
+            insights.append(insight)
+        
+        logger.info(f"Generated market insights for {len(insights)} postcodes")
+        return insights
+    
+    def _analyze_postcode(self, demographic: DemographicData, 
+                        practices: List[PracticeData]) -> MarketInsights:
+        """Analyze market conditions for a specific postcode"""
+        # Calculate practice density
+        practice_density = (len(practices) / demographic.population) * 1000
+        
+        # Determine competition level
+        if practice_density < 0.5:
+            competition_level = "Low"
+        elif practice_density < 1.0:
+            competition_level = "Medium"
+        else:
+            competition_level = "High"
+        
+        # Calculate demographic score
+        demographic_score = self._calculate_demographic_score(demographic)
+        
+        # Predict demand
+        predicted_demand = self.predictor.predict_demand(demographic)
+        
+        # Calculate growth potential
+        growth_potential = self._calculate_growth_potential(
+            demographic, practices, predicted_demand
+        )
+        
+        # Identify risk factors and opportunities
+        risk_factors, opportunities = self._identify_risks_opportunities(
+            demographic, practices, practice_density
+        )
+        
+        return MarketInsights(
+            postcode=demographic.postcode,
+            practice_density=practice_density,
+            competition_level=competition_level,
+            demographic_score=demographic_score,
+            growth_potential=growth_potential,
+            predicted_demand=predicted_demand,
+            risk_factors=risk_factors,
+            opportunities=opportunities
+        )
+    
+    def _calculate_demographic_score(self, demographic: DemographicData) -> float:
+        """Calculate demographic attractiveness score (0-100)"""
+        # Factors that influence dental demand
+        elderly_ratio = demographic.age_65_plus / demographic.population
+        income_factor = min(demographic.median_income / 40000, 2.0)  # Cap at 2x
+        growth_factor = max(0, demographic.population_growth_rate + 0.02) * 10
+        
+        # Weighted score
+        score = (
+            elderly_ratio * 30 +  # Elderly need more dental care
+            income_factor * 40 +  # Higher income = more private dental care
+            growth_factor * 30    # Growth indicates opportunity
+        )
+        
+        return min(100, max(0, score))
+    
+    def _calculate_growth_potential(self, demographic: DemographicData, 
+                                  practices: List[PracticeData], 
+                                  predicted_demand: float) -> float:
+        """Calculate growth potential score (0-100)"""
+        current_supply = len(practices)
+        supply_demand_ratio = current_supply / max(predicted_demand, 1)
+        
+        # Growth potential is higher when demand exceeds supply
+        if supply_demand_ratio < 0.8:
+            base_score = 80
+        elif supply_demand_ratio < 1.0:
+            base_score = 60
+        elif supply_demand_ratio < 1.2:
+            base_score = 40
+        else:
+            base_score = 20
+        
+        # Adjust for population growth and income
+        growth_bonus = demographic.population_growth_rate * 200
+        income_bonus = (demographic.median_income - 30000) / 1000
+        
+        final_score = base_score + growth_bonus + income_bonus
+        return min(100, max(0, final_score))
+    
+    def _identify_risks_opportunities(self, demographic: DemographicData, 
+                                    practices: List[PracticeData], 
+                                    practice_density: float) -> Tuple[List[str], List[str]]:
+        """Identify market risks and opportunities"""
+        risks = []
+        opportunities = []
+        
+        # Risk assessment
+        if practice_density > 1.5:
+            risks.append("High competition - market may be saturated")
+        
+        if demographic.population_growth_rate < -0.01:
+            risks.append("Declining population - shrinking market")
+        
+        if demographic.median_income < 25000:
+            risks.append("Low income area - limited private practice potential")
+        
+        # Opportunity assessment
+        if practice_density < 0.5:
+            opportunities.append("Underserved market - low competition")
+        
+        if demographic.population_growth_rate > 0.02:
+            opportunities.append("Growing population - expanding market")
+        
+        elderly_ratio = demographic.age_65_plus / demographic.population
+        if elderly_ratio > 0.2:
+            opportunities.append("Aging population - increased dental needs")
+        
+        if demographic.median_income > 45000:
+            opportunities.append("High income area - strong private practice potential")
+        
+        # Check for service gaps
+        if practices:
+            all_services = set()
+            for practice in practices:
+                all_services.update(practice.services)
+            
+            if 'Orthodontics' not in all_services:
+                opportunities.append("Gap in orthodontic services")
+            if 'Implants' not in all_services:
+                opportunities.append("Gap in implant services")
+        
+        return risks, opportunities
+
+class DatabaseManager:
+    """Manages data persistence and retrieval"""
+    
+    def __init__(self, db_path: str = "dental_market_data.db"):
+        self.db_path = db_path
+        self.init_database()
+    
+    def init_database(self):
+        """Initialize database tables"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Practices table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS practices (
+                    practice_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    postcode TEXT NOT NULL,
+                    latitude REAL,
+                    longitude REAL,
+                    practice_type TEXT,
+                    dentist_count INTEGER,
+                    established_year INTEGER,
+                    patient_capacity INTEGER,
+                    services TEXT,
+                    rating REAL,
+                    reviews_count INTEGER,
+                    last_updated TIMESTAMP
+                )
+            """)
+            
+            # Demographics table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS demographics (
+                    postcode TEXT PRIMARY KEY,
+                    population INTEGER,
+                    age_0_17 INTEGER,
+                    age_18_64 INTEGER,
+                    age_65_plus INTEGER,
+                    median_income REAL,
+                    house_prices_avg REAL,
+                    house_sales_last_year INTEGER,
+                    population_growth_rate REAL,
+                    last_updated TIMESTAMP
+                )
+            """)
+            
+            # Market insights table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS market_insights (
+                    postcode TEXT PRIMARY KEY,
+                    practice_density REAL,
+                    competition_level TEXT,
+                    demographic_score REAL,
+                    growth_potential REAL,
+                    predicted_demand REAL,
+                    risk_factors TEXT,
+                    opportunities TEXT,
+                    last_updated TIMESTAMP
+                )
+            """)
+            
+            conn.commit()
+        
+        logger.info("Database initialized successfully")
+    
+    def save_practices(self, practices: List[PracticeData]):
+        """Save practice data to database"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            for practice in practices:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO practices VALUES 
+                    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    practice.practice_id, practice.name, practice.postcode,
+                    practice.latitude, practice.longitude, practice.practice_type,
+                    practice.dentist_count, practice.established_year,
+                    practice.patient_capacity, json.dumps(practice.services),
+                    practice.rating, practice.reviews_count, practice.last_updated
+                ))
+            
+            conn.commit()
+        
+        logger.info(f"Saved {len(practices)} practices to database")
+    
+    def get_practices_by_postcode(self, postcode: str) -> List[PracticeData]:
+        """Retrieve practices for a specific postcode"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM practices WHERE postcode = ?", (postcode,))
+            rows = cursor.fetchall()
+            
+            practices = []
+            for row in rows:
+                practice = PracticeData(
+                    practice_id=row[0], name=row[1], postcode=row[2],
+                    latitude=row[3], longitude=row[4], practice_type=row[5],
+                    dentist_count=row[6], established_year=row[7],
+                    patient_capacity=row[8], services=json.loads(row[9]),
+                    rating=row[10], reviews_count=row[11],
+                    last_updated=datetime.fromisoformat(str(row[12]))
+                )
+                practices.append(practice)
+            
+            return practices
+
+class DentalMarketAPI:
+    """Main API class that orchestrates the entire system"""
+    
+    def __init__(self):
+        self.extractor = DataExtractor()
+        self.demographic_analyzer = DemographicAnalyzer()
+        self.market_analyzer = MarketAnalyzer()
+        self.db_manager = DatabaseManager()
+    
+    async def analyze_postcodes(self, postcodes: List[str]) -> Dict:
+        """Complete market analysis for given postcodes"""
+        logger.info(f"Starting analysis for postcodes: {postcodes}")
+        
+        # Extract data
+        practices = await self.extractor.extract_practice_data(postcodes)
+        demographics = await self.demographic_analyzer.get_demographic_data(postcodes)
+        
+        # Analyze market
+        market_insights = self.market_analyzer.analyze_market(practices, demographics)
+        
+        # Save to database
+        self.db_manager.save_practices(practices)
+        
+        # Prepare response
+        response = {
+            'status': 'success',
+            'timestamp': datetime.now().isoformat(),
+            'postcodes_analyzed': len(postcodes),
+            'practices_found': len(practices),
+            'insights': []
+        }
+        
+        for insight in market_insights:
+            response['insights'].append({
+                'postcode': insight.postcode,
+                'practice_density': round(insight.practice_density, 2),
+                'competition_level': insight.competition_level,
+                'demographic_score': round(insight.demographic_score, 1),
+                'growth_potential': round(insight.growth_potential, 1),
+                'predicted_demand': round(insight.predicted_demand, 1),
+                'risk_factors': insight.risk_factors,
+                'opportunities': insight.opportunities
+            })
+        
+        logger.info("Analysis completed successfully")
+        return response
+    
+    def get_postcode_summary(self, postcode: str) -> Dict:
+        """Get summary data for a specific postcode"""
+        practices = self.db_manager.get_practices_by_postcode(postcode)
+        
+        if not practices:
+            return {'error': 'No data found for postcode'}
+        
+        # Calculate summary statistics
+        total_practices = len(practices)
+        nhs_practices = len([p for p in practices if p.practice_type == 'NHS'])
+        private_practices = len([p for p in practices if p.practice_type == 'Private'])
+        avg_rating = np.mean([p.rating for p in practices])
+        total_dentists = sum([p.dentist_count for p in practices])
+        
+        return {
+            'postcode': postcode,
+            'total_practices': total_practices,
+            'nhs_practices': nhs_practices,
+            'private_practices': private_practices,
+            'average_rating': round(avg_rating, 2),
+            'total_dentists': total_dentists,
+            'practices': [
+                {
+                    'name': p.name,
+                    'type': p.practice_type,
+                    'dentists': p.dentist_count,
+                    'rating': p.rating,
+                    'services': p.services
+                } for p in practices
+            ]
+        }
+
+# Example usage and testing
+async def main():
+    """Example usage of the dental market analysis system"""
+    api = DentalMarketAPI()
+    
+    # Test postcodes
+    test_postcodes = ['SW1A 1AA', 'M1 1AA', 'B1 1AA', 'LS1 1AA', 'G1 1AA']
+    
+    # Run analysis
+    results = await api.analyze_postcodes(test_postcodes)
+    
+    print("=== DENTAL MARKET ANALYSIS RESULTS ===")
+    print(f"Analysis completed at: {results['timestamp']}")
+    print(f"Postcodes analyzed: {results['postcodes_analyzed']}")
+    print(f"Practices found: {results['practices_found']}")
+    print()
+    
+    for insight in results['insights']:
+        print(f"POSTCODE: {insight['postcode']}")
+        print(f"  Practice Density: {insight['practice_density']} per 1000 residents")
+        print(f"  Competition Level: {insight['competition_level']}")
+        print(f"  Demographic Score: {insight['demographic_score']}/100")
+        print(f"  Growth Potential: {insight['growth_potential']}/100")
+        print(f"  Predicted Demand: {insight['predicted_demand']}")
+        print(f"  Risk Factors: {', '.join(insight['risk_factors'])}")
+        print(f"  Opportunities: {', '.join(insight['opportunities'])}")
+        print("-" * 50)
+
+if __name__ == "__main__":
+    asyncio.run(main())
