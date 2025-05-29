@@ -1,0 +1,59 @@
+async function analyzePostcodes() {
+            const input = document.getElementById('postcodeInput');
+            const postcodes = input.value.split(',').map(pc => pc.trim().toUpperCase()).filter(pc => pc);
+            
+            if (postcodes.length === 0) {
+                alert('Please enter at least one postcode');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loadingSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('analyzeBtn').disabled = true;
+
+            try {
+                console.log('Calling backend API with postcodes:', postcodes);
+                
+                // Call your actual backend API
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ postcodes: postcodes })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`API Error (${response.status}): ${errorData.detail || 'Unknown error'}`);
+                }
+
+                const data = await response.json();
+                console.log('Received data from backend:', data);
+                
+                if (data.status === 'success' && data.insights) {
+                    // Use the real data from your ML backend
+                    displayResults(data.insights, data.practices_found);
+                } else {
+                    throw new Error('Invalid response format from API');
+                }
+
+            } catch (error) {
+                console.error('API Error:', error);
+                
+                // Show user-friendly error message
+                alert(`Analysis failed: ${error.message}\n\nFalling back to demo data.`);
+                
+                // Fallback to demo data if API fails
+                const results = postcodes.map(pc => {
+                    return sampleInsights[pc] || generateRandomInsight(pc);
+                });
+                displayResults(results, results.length * 3);
+            }
+
+            // Hide loading
+            document.getElementById('loadingSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('analyzeBtn').disabled = false;
+        }
