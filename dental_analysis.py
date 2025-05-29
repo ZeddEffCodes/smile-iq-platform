@@ -1,6 +1,6 @@
-# IMPORTANT: Remove or comment out this entire section at the bottom of your dental_analysis.py file:
+# DELETE OR COMMENT OUT THIS ENTIRE SECTION AT THE BOTTOM:
 
-# # Example usage and testing
+# Example usage and testing
 # async def main():
 #     """Example usage of the dental market analysis system"""
 #     api = DentalMarketAPI()
@@ -31,4 +31,4 @@
 # if __name__ == "__main__":
 #     asyncio.run(main())
 
-# ^^^ REMOVE OR COMMENT OUT EVERYTHING ABOVE ^^^
+# ^^^ DELETE EVERYTHING ABOVE ^^^
