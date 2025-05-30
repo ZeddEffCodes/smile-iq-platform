@@ -1,34 +1,63 @@
-# DELETE OR COMMENT OUT THIS ENTIRE SECTION AT THE BOTTOM:
+import asyncio
+import random
+from datetime import datetime
+from typing import List, Dict, Any
 
-# Example usage and testing
-# async def main():
-#     """Example usage of the dental market analysis system"""
-#     api = DentalMarketAPI()
-#     
-#     # Test postcodes
-#     test_postcodes = ['SW1A 1AA', 'M1 1AA', 'B1 1AA', 'LS1 1AA', 'G1 1AA']
-#     
-#     # Run analysis
-#     results = await api.analyze_postcodes(test_postcodes)
-#     
-#     print("=== DENTAL MARKET ANALYSIS RESULTS ===")
-#     print(f"Analysis completed at: {results['timestamp']}")
-#     print(f"Postcodes analyzed: {results['postcodes_analyzed']}")
-#     print(f"Practices found: {results['practices_found']}")
-#     print()
-#     
-#     for insight in results['insights']:
-#         print(f"POSTCODE: {insight['postcode']}")
-#         print(f"  Practice Density: {insight['practice_density']} per 1000 residents")
-#         print(f"  Competition Level: {insight['competition_level']}")
-#         print(f"  Demographic Score: {insight['demographic_score']}/100")
-#         print(f"  Growth Potential: {insight['growth_potential']}/100")
-#         print(f"  Predicted Demand: {insight['predicted_demand']}")
-#         print(f"  Risk Factors: {', '.join(insight['risk_factors'])}")
-#         print(f"  Opportunities: {', '.join(insight['opportunities'])}")
-#         print("-" * 50)
-
-# if __name__ == "__main__":
-#     asyncio.run(main())
-
-# ^^^ DELETE EVERYTHING ABOVE ^^^
+class DentalMarketAPI:
+    """Dental Market Analysis API - Mock implementation for frontend testing"""
+    
+    def __init__(self):
+        """Initialize the API"""
+        pass
+    
+    async def analyze_postcodes(self, postcodes: List[str]) -> Dict[str, Any]:
+        """
+        Analyze dental market for given postcodes
+        Returns mock data for frontend testing
+        """
+        insights = []
+        
+        for postcode in postcodes:
+            insight = {
+                "postcode": postcode.upper(),
+                "practice_density": round(random.uniform(1.2, 8.5), 1),
+                "competition_level": random.choice(["Low", "Medium", "High"]),
+                "demographic_score": random.randint(45, 95),
+                "growth_potential": random.randint(35, 90),
+                "predicted_demand": random.choice(["Growing", "Stable", "Declining"]),
+                "risk_factors": random.sample([
+                    "High competition", 
+                    "Economic uncertainty", 
+                    "Aging population",
+                    "Limited parking",
+                    "High rent costs"
+                ], k=random.randint(1, 3)),
+                "opportunities": random.sample([
+                    "Underserved elderly population",
+                    "Growing young families", 
+                    "Premium service gap",
+                    "Cosmetic demand rising",
+                    "Insurance coverage improving"
+                ], k=random.randint(2, 4))
+            }
+            insights.append(insight)
+        
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "postcodes_analyzed": len(postcodes),
+            "practices_found": len(postcodes) * random.randint(2, 6),
+            "insights": insights
+        }
+    
+    def get_postcode_summary(self, postcode: str) -> Dict[str, Any]:
+        """
+        Get detailed summary for specific postcode
+        Returns mock data for frontend testing
+        """
+        return {
+            "postcode": postcode.upper(),
+            "summary": f"Mock summary for {postcode}",
+            "total_practices": random.randint(5, 25),
+            "market_opportunity": random.choice(["Excellent", "Good", "Fair", "Poor"])
+        }
