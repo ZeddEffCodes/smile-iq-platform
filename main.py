@@ -960,7 +960,22 @@ async def read_root():
             document.getElementById('resultsSection').style.display = 'none';
             document.getElementById('analyzeBtn').disabled = true;
             try {
-                        const response = await fetch('/api/analyze', {
+                console.log('Attempting to analyze postcodes:', postcodes);
+                
+                // Always use dummy data for demo purposes since backend may not be available
+                const dummyInsights = generateInsightData(postcodes);
+                const dummyData = {
+                    status: 'success',
+                    insights: dummyInsights,
+                    practices_found: dummyInsights.reduce((sum, insight) => sum + insight.competitors.length + 1, 0)
+                };
+                
+                console.log('Generated dummy data:', dummyData);
+                displayResults(dummyData.insights, dummyData.practices_found);
+                
+                /* 
+                // Uncomment this section when backend is ready
+                const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -987,17 +1002,11 @@ async def read_root():
                     };
                     displayResults(dummyData.insights, dummyData.practices_found);
                 }
-            } catch (error) {
-                console.error('API Error:', error);
-                // If API fails, show enhanced dummy data
-                const dummyInsights = generateInsightData(postcodes);
-                const dummyData = {
-                    status: 'success', 
-                    insights: dummyInsights,
-                    practices_found: dummyInsights.reduce((sum, insight) => sum + insight.competitors.length + 1, 0)
-                };
-                displayResults(dummyData.insights, dummyData.practices_found);
+                */
             }
+            } catch (error) {
+                console.error('Error generating analysis:', error);
+                alert('Error generating analysis. Please check the console for details.');
             } finally {
                 document.getElementById('loadingSection').style.display = 'none';
                 document.getElementById('analyzeBtn').disabled = false;
