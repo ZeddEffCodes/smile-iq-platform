@@ -235,8 +235,8 @@ async def read_root():
             justify-content: center;
         }
         .tooth-shape {
-            width: 50px;
-            height: 60px;
+            width: 55px;
+            height: 65px;
             background: var(--beige);
             border: 4px solid var(--midnight-blue);
             position: relative;
@@ -244,50 +244,55 @@ async def read_root():
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            gap: 2px;
-            border-radius: 25px 25px 50% 50%;
-            clip-path: polygon(
-                20% 0%, 80% 0%, 
-                85% 20%, 85% 60%, 
-                70% 85%, 50% 100%, 
-                30% 85%, 15% 60%, 
-                15% 20%
-            );
+            gap: 3px;
+            /* Create the classic tooth shape */
+            border-radius: 28px 28px 20px 20px;
         }
         .tooth-shape::before {
             content: '';
             position: absolute;
-            top: -4px;
+            bottom: -4px;
             left: 50%;
             transform: translateX(-50%);
-            width: 8px;
-            height: 8px;
+            width: 20px;
+            height: 15px;
             background: var(--beige);
+            border-radius: 0 0 50% 50%;
             border: 4px solid var(--midnight-blue);
-            border-radius: 50%;
-            z-index: 1;
+            border-top: none;
+        }
+        .tooth-shape::after {
+            content: '';
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 8px;
+            background: var(--midnight-blue);
+            border-radius: 50% 50% 0 0;
         }
         .tooth-eyes {
             display: flex;
-            gap: 8px;
-            margin-top: 6px;
-            z-index: 2;
+            gap: 10px;
+            margin-top: 8px;
+            z-index: 3;
             position: relative;
         }
         .tooth-eye {
-            width: 5px;
-            height: 5px;
+            width: 6px;
+            height: 6px;
             background: var(--midnight-blue);
             border-radius: 50%;
         }
         .tooth-smile {
-            width: 14px;
-            height: 7px;
+            width: 18px;
+            height: 9px;
             border: 2px solid var(--midnight-blue);
             border-top: none;
-            border-radius: 0 0 14px 14px;
-            margin-top: 2px;
-            z-index: 2;
+            border-radius: 0 0 18px 18px;
+            margin-top: 3px;
+            z-index: 3;
             position: relative;
         }
         .header h1 {
@@ -729,8 +734,16 @@ async def read_root():
                 height: 60px;
             }
             .tooth-shape {
-                width: 38px;
-                height: 48px;
+                width: 42px;
+                height: 50px;
+            }
+            .tooth-shape::before {
+                width: 16px;
+                height: 12px;
+            }
+            .tooth-shape::after {
+                width: 10px;
+                height: 6px;
             }
             .search-form {
                 flex-direction: column;
