@@ -219,6 +219,53 @@ async def read_root():
             margin-bottom: 30px;
             padding: 40px 0 20px 0;
         }
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 16px;
+        }
+        .tooth-logo {
+            width: 80px;
+            height: 80px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tooth-shape {
+            width: 60px;
+            height: 70px;
+            background: var(--beige);
+            border: 4px solid var(--midnight-blue);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .tooth-eyes {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .tooth-eye {
+            width: 6px;
+            height: 6px;
+            background: var(--midnight-blue);
+            border-radius: 50%;
+        }
+        .tooth-smile {
+            width: 16px;
+            height: 8px;
+            border: 2px solid var(--midnight-blue);
+            border-top: none;
+            border-radius: 0 0 16px 16px;
+            margin-top: 4px;
+        }
         .header h1 {
             font-size: 3.8rem;
             font-weight: 300;
@@ -649,6 +696,18 @@ async def read_root():
             .header h1 {
                 font-size: 2.8rem;
             }
+            .logo-container {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .tooth-logo {
+                width: 60px;
+                height: 60px;
+            }
+            .tooth-shape {
+                width: 45px;
+                height: 55px;
+            }
             .search-form {
                 flex-direction: column;
                 gap: 16px;
@@ -685,7 +744,18 @@ async def read_root():
 <body>
     <div class="container">
         <div class="header">
-            <h1>Smile IQ</h1>
+            <div class="logo-container">
+                <div class="tooth-logo">
+                    <div class="tooth-shape">
+                        <div class="tooth-eyes">
+                            <div class="tooth-eye"></div>
+                            <div class="tooth-eye"></div>
+                        </div>
+                        <div class="tooth-smile"></div>
+                    </div>
+                </div>
+                <h1>Smile IQ</h1>
+            </div>
             <div class="subtitle">Dental Market Intelligence & Analysis Platform</div>
         </div>
         <div class="demo-note">
