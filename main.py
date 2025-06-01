@@ -235,36 +235,60 @@ async def read_root():
             justify-content: center;
         }
         .tooth-shape {
-            width: 60px;
-            height: 70px;
+            width: 50px;
+            height: 60px;
             background: var(--beige);
             border: 4px solid var(--midnight-blue);
-            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
             gap: 2px;
+            border-radius: 25px 25px 50% 50%;
+            clip-path: polygon(
+                20% 0%, 80% 0%, 
+                85% 20%, 85% 60%, 
+                70% 85%, 50% 100%, 
+                30% 85%, 15% 60%, 
+                15% 20%
+            );
+        }
+        .tooth-shape::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: var(--beige);
+            border: 4px solid var(--midnight-blue);
+            border-radius: 50%;
+            z-index: 1;
         }
         .tooth-eyes {
             display: flex;
             gap: 8px;
-            margin-top: 8px;
+            margin-top: 6px;
+            z-index: 2;
+            position: relative;
         }
         .tooth-eye {
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
             background: var(--midnight-blue);
             border-radius: 50%;
         }
         .tooth-smile {
-            width: 16px;
-            height: 8px;
+            width: 14px;
+            height: 7px;
             border: 2px solid var(--midnight-blue);
             border-top: none;
-            border-radius: 0 0 16px 16px;
-            margin-top: 4px;
+            border-radius: 0 0 14px 14px;
+            margin-top: 2px;
+            z-index: 2;
+            position: relative;
         }
         .header h1 {
             font-size: 3.8rem;
@@ -705,8 +729,8 @@ async def read_root():
                 height: 60px;
             }
             .tooth-shape {
-                width: 45px;
-                height: 55px;
+                width: 38px;
+                height: 48px;
             }
             .search-form {
                 flex-direction: column;
