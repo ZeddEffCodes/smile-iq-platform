@@ -219,94 +219,6 @@ async def read_root():
             margin-bottom: 30px;
             padding: 40px 0 20px 0;
         }
-        .logo-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            gap: 20px;
-        }
-        .tooth-logo {
-            width: 70px;
-            height: 70px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .tooth-outline {
-            width: 50px;
-            height: 58px;
-            background: var(--beige);
-            border: 3px solid var(--midnight-blue);
-            border-radius: 25px 25px 50% 50%;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .tooth-outline::before {
-            content: '';
-            position: absolute;
-            bottom: -3px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 8px;
-            height: 12px;
-            background: var(--beige);
-            border-left: 3px solid var(--midnight-blue);
-            border-right: 3px solid var(--midnight-blue);
-            border-bottom: 3px solid var(--midnight-blue);
-            border-radius: 0 0 4px 4px;
-        }
-        .lightbulb-icon {
-            width: 18px;
-            height: 24px;
-            position: relative;
-            z-index: 2;
-        }
-        .bulb-top {
-            width: 18px;
-            height: 18px;
-            background: transparent;
-            border: 2px solid var(--midnight-blue);
-            border-radius: 50%;
-            position: relative;
-            margin-bottom: 2px;
-        }
-        .bulb-base {
-            width: 12px;
-            height: 4px;
-            background: var(--midnight-blue);
-            margin: 0 auto;
-            border-radius: 2px;
-        }
-        .spark-1, .spark-2, .spark-3 {
-            position: absolute;
-            width: 2px;
-            height: 6px;
-            background: var(--midnight-blue);
-            border-radius: 1px;
-        }
-        .spark-1 {
-            top: -2px;
-            right: -8px;
-            transform: rotate(20deg);
-        }
-        .spark-2 {
-            top: 2px;
-            right: -10px;
-            transform: rotate(-15deg);
-            width: 1px;
-            height: 4px;
-        }
-        .spark-3 {
-            top: -1px;
-            left: -8px;
-            transform: rotate(-20deg);
-            width: 1px;
-            height: 4px;
-        }
         .header h1 {
             font-size: 3.8rem;
             font-weight: 300;
@@ -737,26 +649,6 @@ async def read_root():
             .header h1 {
                 font-size: 2.8rem;
             }
-            .logo-container {
-                flex-direction: column;
-                gap: 12px;
-            }
-            .tooth-logo {
-                width: 55px;
-                height: 55px;
-            }
-            .tooth-outline {
-                width: 40px;
-                height: 46px;
-            }
-            .lightbulb-icon {
-                width: 14px;
-                height: 18px;
-            }
-            .bulb-top {
-                width: 14px;
-                height: 14px;
-            }
             .search-form {
                 flex-direction: column;
                 gap: 16px;
@@ -793,21 +685,7 @@ async def read_root():
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo-container">
-                <div class="tooth-logo">
-                    <div class="tooth-outline">
-                        <div class="lightbulb-icon">
-                            <div class="bulb-top">
-                                <div class="spark-1"></div>
-                                <div class="spark-2"></div>
-                                <div class="spark-3"></div>
-                            </div>
-                            <div class="bulb-base"></div>
-                        </div>
-                    </div>
-                </div>
-                <h1>Smile IQ</h1>
-            </div>
+            <h1>Smile IQ</h1>
             <div class="subtitle">Dental Market Intelligence & Analysis Platform</div>
         </div>
         <div class="demo-note">
