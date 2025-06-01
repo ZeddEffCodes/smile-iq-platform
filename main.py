@@ -1,4 +1,118 @@
-import asyncio
+<script nonce="{script_nonce}">
+        // Input sanitization
+        function sanitizeInput(input) {{
+            return input.replace(/[<>\"'&]/g, function(match) {{
+                const map = {{
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#x27;',
+                    '&': '&amp;'
+                }};
+                return map[match];
+            }});
+        }}
+        
+        // Validate UK postcode format
+        function validatePostcode(postcode) {{
+            const ukPostcodeRegex = /^[A-Z]{{1,2}}[0-9R][0-9A-Z]? ?[0-9][A-Z]{{2}}$/;
+            return ukPostcodeRegex.test(postcode.replace(/\\s+/g, '').toUpperCase());
+        }}
+        
+        function showError(message) {{
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {{
+                errorDiv.style.display = 'none';
+            }}, 5000);
+        }}
+        
+        async function analyzePostcodes() {{
+            const input = document.getElementById('postcodeInput');
+            const btn = document.getElementById('analyzeBtn');
+            const loading = document.getElementById('loadingSection');
+            
+            // Input validation
+            const rawInput = input.value.trim();
+            if (!rawInput) {{
+                showError('Please enter at least one postcode');
+                return;
+            }}
+            
+            // Parse and validate postcodes
+            const postcodes = rawInput.split(',')
+                .map(pc => pc.trim().toUpperCase())
+                .filter(pc => pc);
+            
+            if (postcodes.length === 0) {{
+                showError('Please enter valid postcodes');
+                return;
+            }}
+            
+            if (postcodes.length > 10) {{
+                showError('Maximum 10 postcodes allowed');
+                return;
+            }}
+            
+            // Validate each postcode
+            for (const postcode of postcodes) {{
+                if (!validatePostcode(postcode)) {{
+                    showError(`Invalid postcode format: ${{postcode}}`);
+                    return;
+                }}
+            }}
+            
+            // Show loading state
+            btn.disabled = true;
+            loading.style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            
+            try {{
+                const response = await fetch('/api/analyze', {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/json',
+                    }},
+                    body: JSON.stringify({{ postcodes: postcodes }})
+                }});
+                
+                if (!response.ok) {{
+                    const errorData = await response.json().catch(() => ({{}}));
+                    throw new Error(errorData.detail || `HTTP ${{response.status}}`);
+                }}
+                
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.insights) {{
+                    displayResults(data.insights, data.practices_found);
+                }} else {{
+                    throw new Error('Invalid response format');
+                }}
+                
+            }} catch (error) {{
+                console.error('Analysis failed:', error);
+                showError('Analysis failed. Please try again later.');
+            }} finally {{
+                btn.disabled = false;
+                loading.style.display = 'none';
+            }}
+        }}
+        
+        function displayResults(insights, practicesFound) {{
+            const resultsGrid = document.getElementById('insightsGrid');
+            const practicesCount = document.getElementById('resultsMeta');
+            
+            practicesCount.innerHTML = `
+                Analysis completed at ${{new Date().toLocaleString()}} • 
+                ${{insights.length}} postcode${{insights.length > 1 ? 's' : ''}} analyzed • 
+                ${{practicesFound}} practices found
+            `;
+            
+            const summaryStats = document.getElementById('summaryStats');
+            const avgDensity = insights.reduce((sum, i) => sum + i.practice_density, 0) / insights.length;
+            const avgDemographic = insights.reduce((sum, i) => sum + i.demographic_score, 0) / insights.length;
+            const avgGrowth = insights.reduce((sum, i) => sum + i.growth_potential, 0) / insights.import asyncio
 import secrets
 import time
 from datetime import datetime, timedelta
@@ -297,7 +411,7 @@ async def read_root(_: bool = Depends(rate_limit_check)):
     # Generate nonce for inline scripts (CSP compliance)
     script_nonce = secrets.token_urlsafe(16)
     
-    # Update CSP header to include nonce
+    # Complete secure HTML with full UI restored
     secure_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -353,6 +467,12 @@ async def read_root(_: bool = Depends(rate_limit_check)):
             margin-bottom: 12px;
             letter-spacing: -0.02em;
         }}
+        .header .subtitle {{
+            font-size: 1.1rem;
+            color: var(--midnight-light);
+            font-weight: 400;
+            opacity: 0.8;
+        }}
         .main-card {{
             background: var(--white);
             border-radius: 24px;
@@ -379,15 +499,25 @@ async def read_root(_: bool = Depends(rate_limit_check)):
             margin: 0 auto;
             align-items: stretch;
         }}
-        .postcode-input {{
+        .input-wrapper {{
             flex: 1;
+            position: relative;
+        }}
+        .postcode-input {{
+            width: 100%;
             padding: 18px 24px;
             border: 2px solid var(--beige-dark);
             border-radius: 16px;
             font-size: 1rem;
+            font-weight: 400;
             color: var(--midnight-blue);
             background: var(--white);
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }}
+        .postcode-input:focus {{
+            outline: none;
+            border-color: var(--midnight-blue);
+            box-shadow: 0 0 0 4px rgba(26, 27, 58, 0.08);
         }}
         .analyze-btn {{
             padding: 18px 32px;
@@ -396,18 +526,365 @@ async def read_root(_: bool = Depends(rate_limit_check)):
             border: none;
             border-radius: 16px;
             font-size: 1rem;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }}
+        .analyze-btn:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px var(--shadow-hover);
+            background: var(--midnight-light);
         }}
         .analyze-btn:disabled {{
             opacity: 0.6;
             cursor: not-allowed;
+            transform: none;
         }}
         .loading {{
             display: none;
             text-align: center;
             padding: 60px;
             color: var(--midnight-light);
+        }}
+        .spinner {{
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--beige-dark);
+            border-top: 3px solid var(--midnight-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }}
+        @keyframes spin {{
+            0% {{ transform: rotate(0deg); }}
+            100% {{ transform: rotate(360deg); }}
+        }}
+        .results-section {{
+            display: none;
+            padding: 50px;
+        }}
+        .results-header {{
+            text-align: center;
+            margin-bottom: 50px;
+        }}
+        .results-title {{
+            font-size: 2.2rem;
+            color: var(--midnight-blue);
+            margin-bottom: 12px;
+            font-weight: 300;
+        }}
+        .results-meta {{
+            color: var(--midnight-light);
+            font-size: 0.95rem;
+            opacity: 0.8;
+        }}
+        .summary-stats {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-bottom: 50px;
+        }}
+        .stat-card {{
+            text-align: center;
+            padding: 32px 24px;
+            background: var(--white);
+            border-radius: 20px;
+            border: 1px solid var(--beige-dark);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }}
+        .stat-card:hover {{
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px var(--shadow);
+        }}
+        .stat-number {{
+            font-size: 2.4rem;
+            font-weight: 300;
+            color: var(--midnight-blue);
+            margin-bottom: 8px;
+        }}
+        .stat-label {{
+            color: var(--midnight-light);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 500;
+        }}
+        .insights-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 32px;
+        }}
+        .insight-card {{
+            background: var(--white);
+            border: 1px solid var(--beige-dark);
+            border-radius: 24px;
+            padding: 40px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }}
+        .insight-card::before {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--midnight-blue);
+        }}
+        .insight-card:hover {{
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px var(--shadow-hover);
+            border-color: transparent;
+        }}
+        .postcode-title {{
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--midnight-blue);
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }}
+        .postcode-icon {{
+            width: 32px;
+            height: 32px;
+            background: var(--midnight-blue);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 14px;
+        }}
+        .metrics-row {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 32px;
+        }}
+        .metric {{
+            text-align: center;
+            padding: 24px 16px;
+            background: var(--beige);
+            border-radius: 16px;
+            border: 1px solid var(--beige-dark);
+        }}
+        .metric-value {{
+            font-size: 1.8rem;
+            font-weight: 400;
+            color: var(--midnight-blue);
+            margin-bottom: 8px;
+        }}
+        .metric-label {{
+            font-size: 0.8rem;
+            color: var(--midnight-light);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 500;
+        }}
+        .competition-badge {{
+            display: inline-flex;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 24px auto;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: fit-content;
+        }}
+        .competition-low {{
+            background: #c6f6d5;
+            color: #276749;
+            border: 1px solid #9ae6b4;
+        }}
+        .competition-medium {{
+            background: #fed7aa;
+            color: #c2410c;
+            border: 1px solid #fdba74;
+        }}
+        .competition-high {{
+            background: #fecaca;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+        }}
+        .score-section {{
+            margin: 32px 0;
+        }}
+        .score-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }}
+        .score-label {{
+            font-size: 0.9rem;
+            color: var(--midnight-light);
+            font-weight: 500;
+        }}
+        .score-value {{
+            font-weight: 600;
+            color: var(--midnight-blue);
+        }}
+        .score-bar {{
+            width: 100%;
+            height: 6px;
+            background: var(--beige-dark);
+            border-radius: 3px;
+            overflow: hidden;
+        }}
+        .score-fill {{
+            height: 100%;
+            background: var(--midnight-blue);
+            border-radius: 3px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0;
+        }}
+        .treatment-section {{
+            margin: 32px 0;
+            padding: 24px;
+            background: linear-gradient(135deg, var(--white) 0%, var(--beige) 100%);
+            border-radius: 16px;
+            border: 1px solid var(--beige-dark);
+        }}
+        .treatment-header {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }}
+        .treatment-icon {{
+            width: 24px;
+            height: 24px;
+            background: var(--midnight-blue);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: var(--white);
+        }}
+        .treatment-title {{
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--midnight-blue);
+        }}
+        .treatment-list {{
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }}
+        .treatment-item {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: var(--white);
+            border-radius: 12px;
+            border: 1px solid var(--beige-dark);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }}
+        .treatment-item:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px var(--shadow);
+        }}
+        .treatment-info {{
+            flex: 1;
+        }}
+        .treatment-name {{
+            font-weight: 600;
+            color: var(--midnight-blue);
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+        }}
+        .treatment-details {{
+            font-size: 0.8rem;
+            color: var(--midnight-light);
+            opacity: 0.8;
+        }}
+        .treatment-demand {{
+            background: var(--midnight-blue);
+            color: var(--white);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        .treatment-rank {{
+            width: 32px;
+            height: 32px;
+            background: var(--midnight-blue);
+            color: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-right: 12px;
+        }}
+        .insights-list {{
+            margin-top: 32px;
+        }}
+        .insights-title {{
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--midnight-blue);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
+        .risk-icon, .opportunity-icon {{
+            width: 20px;
+            height: 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--white);
+        }}
+        .risk-icon {{
+            background: var(--midnight-blue);
+        }}
+        .opportunity-icon {{
+            background: var(--midnight-light);
+        }}
+        .insights-items {{
+            list-style: none;
+            padding: 0;
+        }}
+        .insights-items li {{
+            padding: 12px 0;
+            border-bottom: 1px solid var(--beige-dark);
+            color: var(--midnight-light);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }}
+        .insights-items li:last-child {{
+            border-bottom: none;
+        }}
+        .demo-note {{
+            background: var(--beige);
+            border: 1px solid var(--beige-dark);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 30px;
+            text-align: center;
+        }}
+        .demo-note strong {{
+            color: var(--midnight-blue);
         }}
         .error-message {{
             background: #ffebee;
@@ -417,6 +894,41 @@ async def read_root(_: bool = Depends(rate_limit_check)):
             border-radius: 8px;
             margin: 16px 0;
             display: none;
+        }}
+        @media (max-width: 768px) {{
+            .header h1 {{
+                font-size: 2.8rem;
+            }}
+            .search-form {{
+                flex-direction: column;
+                gap: 16px;
+            }}
+            .insights-grid {{
+                grid-template-columns: 1fr;
+            }}
+            .metrics-row {{
+                grid-template-columns: 1fr;
+            }}
+            .search-section,
+            .results-section {{
+                padding: 32px 24px;
+            }}
+            .insight-card {{
+                padding: 32px 24px;
+            }}
+        }}
+        .fade-in {{
+            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }}
+        @keyframes fadeIn {{
+            from {{
+                opacity: 0;
+                transform: translateY(20px);
+            }}
+            to {{
+                opacity: 1;
+                transform: translateY(0);
+            }}
         }}
     </style>
 </head>
@@ -432,16 +944,23 @@ async def read_root(_: bool = Depends(rate_limit_check)):
             <div class="subtitle">Dental Market Intelligence & Analysis Platform</div>
         </div>
         
+        <div class="demo-note">
+            <strong>Live API Mode:</strong> This platform connects to your Railway backend API for real dental market analysis.
+        </div>
+        
         <div class="main-card">
             <div class="search-section">
                 <h2 class="search-title">Analyze Dental Market by Postcode</h2>
                 <div class="search-form">
-                    <input type="text" 
-                           class="postcode-input" 
-                           id="postcodeInput" 
-                           placeholder="Enter UK postcodes (e.g., SW1A 1AA, M1 1AA)"
-                           maxlength="100"
-                           pattern="^[A-Za-z0-9\\s,]+$">
+                    <div class="input-wrapper">
+                        <input type="text" 
+                               class="postcode-input" 
+                               id="postcodeInput" 
+                               placeholder="Enter postcodes (e.g., SW1A 1AA, M1 1AA, B1 1AA)"
+                               value="SW1A 1AA, M1 1AA, B1 1AA"
+                               maxlength="100"
+                               pattern="^[A-Za-z0-9\\s,]+$">
+                    </div>
                     <button class="analyze-btn" id="analyzeBtn">
                         <i class="fas fa-search"></i>
                         Analyze Market
@@ -451,7 +970,20 @@ async def read_root(_: bool = Depends(rate_limit_check)):
             </div>
             
             <div class="loading" id="loadingSection">
+                <div class="spinner"></div>
                 <div>Analyzing dental market data...</div>
+                <div style="font-size: 0.9rem; margin-top: 12px; opacity: 0.7;">
+                    Extracting practice data, demographics, and generating ML predictions
+                </div>
+            </div>
+            
+            <div class="results-section" id="resultsSection">
+                <div class="results-header">
+                    <h2 class="results-title">Market Analysis Results</h2>
+                    <div class="results-meta" id="resultsMeta"></div>
+                </div>
+                <div class="summary-stats" id="summaryStats"></div>
+                <div class="insights-grid" id="insightsGrid"></div>
             </div>
         </div>
     </div>
