@@ -224,76 +224,88 @@ async def read_root():
             align-items: center;
             justify-content: center;
             margin-bottom: 20px;
-            gap: 16px;
+            gap: 20px;
         }
         .tooth-logo {
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        .tooth-shape {
-            width: 55px;
-            height: 65px;
+        .tooth-outline {
+            width: 50px;
+            height: 58px;
             background: var(--beige);
-            border: 4px solid var(--midnight-blue);
+            border: 3px solid var(--midnight-blue);
+            border-radius: 25px 25px 50% 50%;
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-direction: column;
-            gap: 3px;
-            /* Create the classic tooth shape */
-            border-radius: 28px 28px 20px 20px;
         }
-        .tooth-shape::before {
+        .tooth-outline::before {
             content: '';
             position: absolute;
-            bottom: -4px;
+            bottom: -3px;
             left: 50%;
             transform: translateX(-50%);
-            width: 20px;
-            height: 15px;
+            width: 8px;
+            height: 12px;
             background: var(--beige);
-            border-radius: 0 0 50% 50%;
-            border: 4px solid var(--midnight-blue);
-            border-top: none;
+            border-left: 3px solid var(--midnight-blue);
+            border-right: 3px solid var(--midnight-blue);
+            border-bottom: 3px solid var(--midnight-blue);
+            border-radius: 0 0 4px 4px;
         }
-        .tooth-shape::after {
-            content: '';
-            position: absolute;
-            bottom: 6px;
-            left: 50%;
-            transform: translateX(-50%);
+        .lightbulb-icon {
+            width: 18px;
+            height: 24px;
+            position: relative;
+            z-index: 2;
+        }
+        .bulb-top {
+            width: 18px;
+            height: 18px;
+            background: transparent;
+            border: 2px solid var(--midnight-blue);
+            border-radius: 50%;
+            position: relative;
+            margin-bottom: 2px;
+        }
+        .bulb-base {
             width: 12px;
-            height: 8px;
+            height: 4px;
             background: var(--midnight-blue);
-            border-radius: 50% 50% 0 0;
+            margin: 0 auto;
+            border-radius: 2px;
         }
-        .tooth-eyes {
-            display: flex;
-            gap: 10px;
-            margin-top: 8px;
-            z-index: 3;
-            position: relative;
-        }
-        .tooth-eye {
-            width: 6px;
+        .spark-1, .spark-2, .spark-3 {
+            position: absolute;
+            width: 2px;
             height: 6px;
             background: var(--midnight-blue);
-            border-radius: 50%;
+            border-radius: 1px;
         }
-        .tooth-smile {
-            width: 18px;
-            height: 9px;
-            border: 2px solid var(--midnight-blue);
-            border-top: none;
-            border-radius: 0 0 18px 18px;
-            margin-top: 3px;
-            z-index: 3;
-            position: relative;
+        .spark-1 {
+            top: -2px;
+            right: -8px;
+            transform: rotate(20deg);
+        }
+        .spark-2 {
+            top: 2px;
+            right: -10px;
+            transform: rotate(-15deg);
+            width: 1px;
+            height: 4px;
+        }
+        .spark-3 {
+            top: -1px;
+            left: -8px;
+            transform: rotate(-20deg);
+            width: 1px;
+            height: 4px;
         }
         .header h1 {
             font-size: 3.8rem;
@@ -730,20 +742,20 @@ async def read_root():
                 gap: 12px;
             }
             .tooth-logo {
-                width: 60px;
-                height: 60px;
+                width: 55px;
+                height: 55px;
             }
-            .tooth-shape {
-                width: 42px;
-                height: 50px;
+            .tooth-outline {
+                width: 40px;
+                height: 46px;
             }
-            .tooth-shape::before {
-                width: 16px;
-                height: 12px;
+            .lightbulb-icon {
+                width: 14px;
+                height: 18px;
             }
-            .tooth-shape::after {
-                width: 10px;
-                height: 6px;
+            .bulb-top {
+                width: 14px;
+                height: 14px;
             }
             .search-form {
                 flex-direction: column;
@@ -783,12 +795,15 @@ async def read_root():
         <div class="header">
             <div class="logo-container">
                 <div class="tooth-logo">
-                    <div class="tooth-shape">
-                        <div class="tooth-eyes">
-                            <div class="tooth-eye"></div>
-                            <div class="tooth-eye"></div>
+                    <div class="tooth-outline">
+                        <div class="lightbulb-icon">
+                            <div class="bulb-top">
+                                <div class="spark-1"></div>
+                                <div class="spark-2"></div>
+                                <div class="spark-3"></div>
+                            </div>
+                            <div class="bulb-base"></div>
                         </div>
-                        <div class="tooth-smile"></div>
                     </div>
                 </div>
                 <h1>Smile IQ</h1>
