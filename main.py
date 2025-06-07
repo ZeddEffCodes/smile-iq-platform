@@ -15,6 +15,7 @@ from collections import defaultdict
 import secrets
 import hashlib
 from datetime import datetime, timedelta
+import random
 
 # Add this to confirm Railway is loading the correct file
 print("🚀 Starting Smile IQ server - main.py loaded!")
@@ -141,15 +142,6 @@ async def validate_api_key(credentials: HTTPAuthorizationCredentials = Depends(s
             raise HTTPException(status_code=401, detail="Invalid API key")
     return True
 
-# Try to import dental analysis backend
-try:
-    from dental_analysis import DentalMarketAPI
-    dental_api = DentalMarketAPI()
-    logger.info("✅ Dental analysis backend loaded successfully")
-except ImportError as e:
-    logger.error(f"❌ Failed to import dental_analysis: {e}")
-    dental_api = None
-
 class PostcodeRequest(BaseModel):
     postcodes: List[str] = Field(..., min_items=1, max_items=10)  # Security: Limit array size
     
@@ -179,7 +171,6 @@ class PostcodeRequest(BaseModel):
 @app.get("/")
 async def read_root():
     """Serve homepage"""
-    # The HTML content remains exactly the same as the original
     return HTMLResponse("""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -446,66 +437,40 @@ async def read_root():
             letter-spacing: 0.6px;
             font-weight: 500;
         }
-        .competition-badge {
-            display: inline-flex;
-            padding: 8px 16px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 500;
+        .opportunity-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin: 24px auto;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            width: fit-content;
+            margin-left: auto;
         }
-        .competition-low {
-            background: #c6f6d5;
-            color: #276749;
-            border: 1px solid #9ae6b4;
+        .opportunity-high {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
         }
-        .competition-medium {
-            background: #fed7aa;
-            color: #c2410c;
-            border: 1px solid #fdba74;
+        .opportunity-medium {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
         }
-        .competition-high {
-            background: #fecaca;
-            color: #dc2626;
-            border: 1px solid #fca5a5;
+        .opportunity-low {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
         }
-        .score-section {
-            margin: 32px 0;
-        }
-        .score-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .score-label {
-            font-size: 0.9rem;
-            color: var(--midnight-light);
-            font-weight: 500;
-        }
-        .score-value {
+        .section-title {
+            font-size: 1rem;
             font-weight: 600;
             color: var(--midnight-blue);
-        }
-        .score-bar {
-            width: 100%;
-            height: 6px;
-            background: var(--beige-dark);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        .score-fill {
-            height: 100%;
-            background: var(--midnight-blue);
-            border-radius: 3px;
-            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 0;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 2px solid var(--beige-dark);
+            padding-bottom: 8px;
         }
         .treatment-section {
             margin: 32px 0;
@@ -591,50 +556,6 @@ async def read_root():
             font-weight: 700;
             font-size: 0.9rem;
             margin-right: 12px;
-        }
-        .opportunity-badge {
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 8px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-left: auto;
-        }
-        .opportunity-high {
-            background: #dcfce7;
-            color: #166534;
-            border: 1px solid #bbf7d0;
-        }
-        .opportunity-medium {
-            background: #fef3c7;
-            color: #92400e;
-            border: 1px solid #fde68a;
-        }
-        .opportunity-low {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
-        .market-metrics {
-            margin: 24px 0;
-        }
-        .metric-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-        .section-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--midnight-blue);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 2px solid var(--beige-dark);
-            padding-bottom: 8px;
         }
         .pricing-intelligence {
             margin: 24px 0;
@@ -809,11 +730,16 @@ async def read_root():
             border-radius: 12px;
             border: 1px solid var(--beige-dark);
         }
-        .treatment-market-data {
-            font-size: 0.75rem;
-            color: var(--midnight-light);
-            margin-top: 4px;
-            opacity: 0.8;
+        .demo-note {
+            background: var(--beige);
+            border: 1px solid var(--beige-dark);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .demo-note strong {
+            color: var(--midnight-blue);
         }
         .recommendations {
             margin-top: 32px;
@@ -856,17 +782,6 @@ async def read_root():
         }
         .insights-items li:last-child {
             border-bottom: none;
-        }
-        .demo-note {
-            background: var(--beige);
-            border: 1px solid var(--beige-dark);
-            border-radius: 20px;
-            padding: 24px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        .demo-note strong {
-            color: var(--midnight-blue);
         }
         @media (max-width: 768px) {
             .header h1 {
@@ -952,13 +867,16 @@ async def read_root():
         async function analyzePostcodes() {
             const input = document.getElementById('postcodeInput');
             const postcodes = input.value.split(',').map(pc => pc.trim().toUpperCase()).filter(pc => pc);
+            
             if (postcodes.length === 0) {
                 alert('Please enter at least one postcode');
                 return;
             }
+            
             document.getElementById('loadingSection').style.display = 'block';
             document.getElementById('resultsSection').style.display = 'none';
             document.getElementById('analyzeBtn').disabled = true;
+            
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
@@ -967,12 +885,15 @@ async def read_root():
                     },
                     body: JSON.stringify({ postcodes: postcodes })
                 });
+                
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(`API Error (${response.status}): ${errorData.detail || 'Unknown error'}`);
                 }
+                
                 const data = await response.json();
                 console.log('Received data from backend:', data);
+                
                 if (data.status === 'success' && data.insights) {
                     displayResults(data.insights, data.practices_found);
                 } else {
@@ -986,14 +907,18 @@ async def read_root():
                 document.getElementById('analyzeBtn').disabled = false;
             }
         }
+        
         function displayResults(insights, practicesFound) {
             const resultsGrid = document.getElementById('insightsGrid');
             const practicesCount = document.getElementById('resultsMeta');
+            
             practicesCount.innerHTML = `
                 Analysis completed at ${new Date().toLocaleString()} • 
                 ${insights.length} postcode${insights.length > 1 ? 's' : ''} analyzed • 
-                ${practicesFound} practices found • ${insights.reduce((sum, i) => sum + i.competitors.length, 0)} direct competitors identified
+                ${practicesFound} practices found • 
+                ${insights.reduce((sum, i) => sum + i.competitors.length, 0)} direct competitors identified
             `;
+            
             const summaryStats = document.getElementById('summaryStats');
             const avgRevenue = insights.reduce((sum, i) => sum + i.market_metrics.avg_revenue_per_patient, 0) / insights.length;
             const totalOpportunityValue = insights.reduce((sum, i) => sum + i.opportunity_value, 0);
@@ -1018,21 +943,18 @@ async def read_root():
                     <div class="stat-label">High Opportunity Areas</div>
                 </div>
             `;
+            
             resultsGrid.innerHTML = insights.map(insight => createInsightCard(insight)).join('');
+            
             insights.forEach(insight => {
                 populateTreatments(insight);
                 populateCompetitors(insight);
             });
+            
             document.getElementById('resultsSection').style.display = 'block';
-            setTimeout(() => {
-                document.querySelectorAll('.score-fill').forEach(bar => {
-                    const width = bar.dataset.width;
-                    bar.style.width = width + '%';
-                });
-            }, 200);
         }
+        
         function createInsightCard(insight) {
-            const competitionClass = `competition-${insight.competition_level.toLowerCase()}`;
             const opportunityClass = insight.opportunity_score > 75 ? 'opportunity-high' : 
                                    insight.opportunity_score > 50 ? 'opportunity-medium' : 'opportunity-low';
             const opportunityLabel = insight.opportunity_score > 75 ? 'High Opportunity' : 
@@ -1051,7 +973,7 @@ async def read_root():
                     </div>
                     
                     <div class="market-metrics">
-                        <div class="metric-row">
+                        <div class="metrics-row">
                             <div class="metric">
                                 <div class="metric-value">£${insight.market_metrics.avg_revenue_per_patient.toLocaleString()}</div>
                                 <div class="metric-label">Avg Revenue/Patient</div>
@@ -1061,7 +983,7 @@ async def read_root():
                                 <div class="metric-label">Patient Acquisition Cost</div>
                             </div>
                         </div>
-                        <div class="metric-row">
+                        <div class="metrics-row">
                             <div class="metric">
                                 <div class="metric-value">${insight.market_metrics.average_appointment_value}</div>
                                 <div class="metric-label">Avg Appointment Value</div>
@@ -1072,7 +994,7 @@ async def read_root():
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="pricing-intelligence">
                         <h4 class="section-title">
                             <i class="fas fa-pound-sign"></i>
@@ -1093,7 +1015,7 @@ async def read_root():
                             `).join('')}
                         </div>
                     </div>
-
+                    
                     <div class="competitor-analysis">
                         <h4 class="section-title">
                             <i class="fas fa-users"></i>
@@ -1102,7 +1024,7 @@ async def read_root():
                         <div class="competitor-list" id="competitors-${insight.postcode.replace(/\\s+/g, '')}">
                         </div>
                     </div>
-
+                    
                     <div class="gap-analysis">
                         <h4 class="section-title">
                             <i class="fas fa-chart-line"></i>
@@ -1121,7 +1043,7 @@ async def read_root():
                             `).join('')}
                         </div>
                     </div>
-
+                    
                     <div class="patient-insights">
                         <div class="insight-row">
                             <div class="insight-metric">
@@ -1138,7 +1060,7 @@ async def read_root():
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="treatment-section">
                         <div class="treatment-header">
                             <div class="treatment-icon">
@@ -1149,7 +1071,7 @@ async def read_root():
                         <div class="treatment-list" id="treatments-${insight.postcode.replace(/\\s+/g, '')}">
                         </div>
                     </div>
-
+                    
                     ${insight.strategic_recommendations && insight.strategic_recommendations.length > 0 ? `
                         <div class="recommendations">
                             <div class="insights-title">
@@ -1163,9 +1085,9 @@ async def read_root():
                             </ul>
                         </div>
                     ` : ''}
-
+                    
                     ${insight.market_risks && insight.market_risks.length > 0 ? `
-                        <div class="insights-list">
+                        <div class="recommendations">
                             <div class="insights-title">
                                 <div class="risk-icon">
                                     <i class="fas fa-exclamation-triangle"></i>
@@ -1180,6 +1102,7 @@ async def read_root():
                 </div>
             `;
         }
+        
         function populateCompetitors(insight) {
             const competitorContainer = document.getElementById(`competitors-${insight.postcode.replace(/\\s+/g, '')}`);
             if (competitorContainer) {
@@ -1203,7 +1126,7 @@ async def read_root():
                 `).join('');
             }
         }
-
+        
         function populateTreatments(insight) {
             const treatmentContainer = document.getElementById(`treatments-${insight.postcode.replace(/\\s+/g, '')}`);
             if (treatmentContainer) {
@@ -1220,9 +1143,12 @@ async def read_root():
                 `).join('');
             }
         }
+        
         function getRecommendedTreatments(insight) {
-            const income = insight.demographic_score > 75 ? 'high' : insight.demographic_score > 50 ? 'medium' : 'low';
+            const income = insight.patient_demographics.insurance_mix.private > 70 ? 'high' : 
+                          insight.patient_demographics.insurance_mix.private > 50 ? 'medium' : 'low';
             const competition = insight.competition_level.toLowerCase();
+            
             const treatmentDatabase = [
                 {
                     name: "Invisalign / Clear Aligners",
@@ -1240,7 +1166,7 @@ async def read_root():
                     name: "Dental Implants",
                     details: "Ages 45-75 • Upper Income • Tooth Replacement",
                     demand: "High",
-                    priority: insight.demographic_score > 70 ? 9 : 6
+                    priority: income === 'high' ? 9 : 6
                 },
                 {
                     name: "Composite Bonding",
@@ -1255,8 +1181,10 @@ async def read_root():
                     priority: income === 'high' ? 9 : 3
                 }
             ];
+            
             const adjustedTreatments = treatmentDatabase.map(treatment => {
                 let adjustedPriority = treatment.priority;
+                
                 if (income === 'high' && ['Invisalign / Clear Aligners', 'Dental Implants', 'Veneers / Smile Makeovers'].includes(treatment.name)) {
                     adjustedPriority += 2;
                 }
@@ -1266,506 +1194,18 @@ async def read_root():
                 if (competition === 'high' && ['Invisalign / Clear Aligners', 'Veneers / Smile Makeovers'].includes(treatment.name)) {
                     adjustedPriority -= 1;
                 }
+                
                 return {
                     ...treatment,
                     adjustedPriority
                 };
             });
+            
             return adjustedTreatments
                 .sort((a, b) => b.adjustedPriority - a.adjustedPriority)
                 .slice(0, 5);
         }
-        document.getElementById('postcodeInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                analyzePostcodes();
-            }
-        });
-    </script>. Please check the console for details.');
-            } finally {
-                document.getElementById('loadingSection').style.display = 'none';
-                document.getElementById('analyzeBtn').disabled = false;
-            }
-        }
-        function displayResults(insights, practicesFound) {
-            const resultsGrid = document.getElementById('insightsGrid');
-            const practicesCount = document.getElementById('resultsMeta');
-            practicesCount.innerHTML = `
-                Analysis completed at ${new Date().toLocaleString()} • 
-                ${insights.length} postcode${insights.length > 1 ? 's' : ''} analyzed • 
-                ${practicesFound} practices found • ${insights.reduce((sum, i) => sum + i.competitors.length, 0)} direct competitors identified
-            `;
-            const summaryStats = document.getElementById('summaryStats');
-            const avgRevenue = insights.reduce((sum, i) => sum + i.market_metrics.avg_revenue_per_patient, 0) / insights.length;
-            const totalOpportunityValue = insights.reduce((sum, i) => sum + i.opportunity_value, 0);
-            const avgCompetitorCount = insights.reduce((sum, i) => sum + i.competitors.length, 0) / insights.length;
-            const highOpportunityAreas = insights.filter(i => i.opportunity_score > 75).length;
-            
-            summaryStats.innerHTML = `
-                <div class="stat-card fade-in">
-                    <div class="stat-number">£${avgRevenue.toLocaleString()}</div>
-                    <div class="stat-label">Avg Revenue/Patient</div>
-                </div>
-                <div class="stat-card fade-in">
-                    <div class="stat-number">${avgCompetitorCount.toFixed(1)}</div>
-                    <div class="stat-label">Avg Competitors/Area</div>
-                </div>
-                <div class="stat-card fade-in">
-                    <div class="stat-number">£${(totalOpportunityValue/1000).toFixed(0)}k</div>
-                    <div class="stat-label">Total Market Opportunity</div>
-                </div>
-                <div class="stat-card fade-in">
-                    <div class="stat-number">${highOpportunityAreas}</div>
-                    <div class="stat-label">High Opportunity Areas</div>
-                </div>
-            `;
-            resultsGrid.innerHTML = insights.map(insight => createInsightCard(insight)).join('');
-            insights.forEach(insight => {
-                populateTreatments(insight);
-                populateCompetitors(insight);
-            });
-            document.getElementById('resultsSection').style.display = 'block';
-            setTimeout(() => {
-                document.querySelectorAll('.score-fill').forEach(bar => {
-                    const width = bar.dataset.width;
-                    bar.style.width = width + '%';
-                });
-            }, 200);
-        }
-        function createInsightCard(insight) {
-            const competitionClass = `competition-${insight.competition_level.toLowerCase()}`;
-            return `
-                <div class="insight-card fade-in">
-                    <div class="postcode-title">
-                        <div class="postcode-icon">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        ${insight.postcode}
-                        <div class="opportunity-badge ${insight.opportunity_score > 75 ? 'opportunity-high' : insight.opportunity_score > 50 ? 'opportunity-medium' : 'opportunity-low'}">
-                            ${insight.opportunity_score > 75 ? 'High Opportunity' : insight.opportunity_score > 50 ? 'Moderate Opportunity' : 'Low Opportunity'}
-                        </div>
-                    </div>
-                    
-                    <div class="market-metrics">
-                        <div class="metric-row">
-                            <div class="metric">
-                                <div class="metric-value">£${insight.market_metrics.avg_revenue_per_patient.toLocaleString()}</div>
-                                <div class="metric-label">Avg Revenue/Patient</div>
-                            </div>
-                            <div class="metric">
-                                <div class="metric-value">${insight.market_metrics.patient_acquisition_cost}</div>
-                                <div class="metric-label">Patient Acquisition Cost</div>
-                            </div>
-                        </div>
-                        <div class="metric-row">
-                            <div class="metric">
-                                <div class="metric-value">${insight.market_metrics.average_appointment_value}</div>
-                                <div class="metric-label">Avg Appointment Value</div>
-                            </div>
-                            <div class="metric">
-                                <div class="metric-value">${insight.market_metrics.no_show_rate}%</div>
-                                <div class="metric-label">Area No-Show Rate</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pricing-intelligence">
-                        <h4 class="section-title">
-                            <i class="fas fa-pound-sign"></i>
-                            Competitive Pricing Intelligence
-                        </h4>
-                        <div class="pricing-grid">
-                            ${insight.pricing_data.map(item => `
-                                <div class="pricing-item">
-                                    <div class="treatment-name">${item.treatment}</div>
-                                    <div class="price-comparison">
-                                        <span class="market-price">Market Avg: ${item.market_average}</span>
-                                        <span class="price-trend ${item.trend === 'up' ? 'trending-up' : item.trend === 'down' ? 'trending-down' : 'stable'}">
-                                            <i class="fas fa-arrow-${item.trend === 'up' ? 'up' : item.trend === 'down' ? 'down' : 'right'}"></i>
-                                            ${item.trend_percentage}
-                                        </span>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-
-                    <div class="competitor-analysis">
-                        <h4 class="section-title">
-                            <i class="fas fa-users"></i>
-                            Direct Competitors (${insight.competitors.length})
-                        </h4>
-                        <div class="competitor-list" id="competitors-${insight.postcode.replace(/\\s+/g, '')}">
-                        </div>
-                    </div>
-
-                    <div class="gap-analysis">
-                        <h4 class="section-title">
-                            <i class="fas fa-chart-line"></i>
-                            Market Gap Analysis
-                        </h4>
-                        <div class="gap-items">
-                            ${insight.service_gaps.map(gap => `
-                                <div class="gap-item">
-                                    <div class="gap-service">${gap.service}</div>
-                                    <div class="gap-details">
-                                        <span class="demand-level ${gap.demand_level.toLowerCase()}">${gap.demand_level} Demand</span>
-                                        <span class="supply-level">Supply: ${gap.current_supply}</span>
-                                        <span class="opportunity-value">Value: ${gap.opportunity_value}</span>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-
-                    <div class="patient-insights">
-                        <div class="insight-row">
-                            <div class="insight-metric">
-                                <div class="metric-value">${insight.patient_demographics.avg_age}</div>
-                                <div class="metric-label">Average Patient Age</div>
-                            </div>
-                            <div class="insight-metric">
-                                <div class="metric-value">${insight.patient_demographics.insurance_mix.private}%</div>
-                                <div class="metric-label">Private Pay Patients</div>
-                            </div>
-                            <div class="insight-metric">
-                                <div class="metric-value">${insight.patient_demographics.avg_household_income}</div>
-                                <div class="metric-label">Avg Household Income</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="treatment-section">
-                        <div class="treatment-header">
-                            <div class="treatment-icon">
-                                <i class="fas fa-tooth"></i>
-                            </div>
-                            <div class="treatment-title">High-Demand Treatments in ${insight.postcode}</div>
-                        </div>
-                        <div class="treatment-list" id="treatments-${insight.postcode.replace(/\\s+/g, '')}">
-                        </div>
-                    </div>
-
-                    ${insight.strategic_recommendations.length > 0 ? `
-                        <div class="recommendations">
-                            <div class="insights-title">
-                                <div class="opportunity-icon">
-                                    <i class="fas fa-lightbulb"></i>
-                                </div>
-                                Strategic Recommendations
-                            </div>
-                            <ul class="insights-items">
-                                ${insight.strategic_recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-
-                    ${insight.market_risks.length > 0 ? `
-                        <div class="insights-list">
-                            <div class="insights-title">
-                                <div class="risk-icon">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                </div>
-                                Market Risks
-                            </div>
-                            <ul class="insights-items">
-                                ${insight.market_risks.map(risk => `<li>${risk}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        }
-        function populateCompetitors(insight) {
-            const competitorContainer = document.getElementById(`competitors-${insight.postcode.replace(/\\s+/g, '')}`);
-            competitorContainer.innerHTML = insight.competitors.map(competitor => `
-                <div class="competitor-item">
-                    <div class="competitor-header">
-                        <div class="competitor-name">${competitor.name}</div>
-                        <div class="competitor-distance">${competitor.distance} miles</div>
-                    </div>
-                    <div class="competitor-details">
-                        <div class="competitor-metrics">
-                            <span class="metric-badge reviews">★ ${competitor.rating} (${competitor.review_count} reviews)</span>
-                            <span class="metric-badge patients">${competitor.estimated_patients}/month</span>
-                            <span class="metric-badge specialty">${competitor.specialties.join(', ')}</span>
-                        </div>
-                        <div class="competitor-strengths">
-                            <strong>Competitive Advantages:</strong> ${competitor.competitive_advantages.join(', ')}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function populateTreatments(insight) {
-            const treatmentContainer = document.getElementById(`treatments-${insight.postcode.replace(/\\s+/g, '')}`);
-            const treatments = getEnhancedTreatmentData(insight);
-            treatmentContainer.innerHTML = treatments.map((treatment, index) => `
-                <div class="treatment-item">
-                    <div class="treatment-rank">${index + 1}</div>
-                    <div class="treatment-info">
-                        <div class="treatment-name">${treatment.name}</div>
-                        <div class="treatment-details">${treatment.details}</div>
-                        <div class="treatment-market-data">
-                            Market Price: ${treatment.market_price} | 
-                            Monthly Searches: ${treatment.search_volume} | 
-                            Competition: ${treatment.competition_level}
-                        </div>
-                    </div>
-                    <div class="treatment-demand">${treatment.demand}</div>
-                </div>
-            `).join('');
-        }
-        function getEnhancedTreatmentData(insight) {
-            const treatmentDatabase = [
-                {
-                    name: "Invisalign / Clear Aligners",
-                    details: "Ages 18-40 • High conversion rate • Premium positioning opportunity",
-                    market_price: "£3,200-£4,500",
-                    search_volume: "890/month",
-                    competition_level: "Medium",
-                    demand: "Very High",
-                    priority: insight.market_metrics.avg_revenue_per_patient > 280 ? 10 : 7
-                },
-                {
-                    name: "Dental Implants",
-                    details: "Ages 45-75 • High-value treatment • Aging demographic driver",
-                    market_price: "£2,800-£4,200",
-                    search_volume: "650/month",
-                    competition_level: "High",
-                    demand: "High", 
-                    priority: insight.patient_demographics.avg_age > 45 ? 9 : 6
-                },
-                {
-                    name: "Teeth Whitening",
-                    details: "All ages • High-margin service • Easy upsell opportunity",
-                    market_price: "£350-£650",
-                    search_volume: "1,240/month",
-                    competition_level: "High",
-                    demand: "Very High",
-                    priority: 8
-                },
-                {
-                    name: "Composite Bonding",
-                    details: "Ages 20-40 • Budget-friendly cosmetics • Quick procedure",
-                    market_price: "£200-£400/tooth",
-                    search_volume: "320/month",
-                    competition_level: "Medium",
-                    demand: "Medium",
-                    priority: insight.patient_demographics.insurance_mix.private < 60 ? 7 : 5
-                },
-                {
-                    name: "Porcelain Veneers",
-                    details: "Ages 25-50 • Premium cosmetic treatment • High-income demographic",
-                    market_price: "£800-£1,200/tooth",
-                    search_volume: "450/month",
-                    competition_level: "Medium",
-                    demand: "High",
-                    priority: insight.patient_demographics.insurance_mix.private > 70 ? 9 : 4
-                }
-            ];
-
-            return treatmentDatabase
-                .sort((a, b) => b.priority - a.priority)
-                .slice(0, 5);
-        }
-
-        // Generate realistic dummy data based on postcode
-        function generateInsightData(postcodes) {
-            return postcodes.map(postcode => {
-                const isLondon = postcode.startsWith('SW') || postcode.startsWith('W') || postcode.startsWith('E') || postcode.startsWith('N');
-                const isManchester = postcode.startsWith('M');
-                const isBirmingham = postcode.startsWith('B');
-                
-                // Base metrics on location
-                const baseRevenue = isLondon ? 320 : isManchester ? 280 : 250;
-                const baseIncome = isLondon ? 65000 : isManchester ? 45000 : 42000;
-                const competitorCount = isLondon ? Math.floor(Math.random() * 8) + 5 : Math.floor(Math.random() * 5) + 2;
-                
-                return {
-                    postcode,
-                    opportunity_score: Math.floor(Math.random() * 40) + 60,
-                    opportunity_value: Math.floor(Math.random() * 150000) + 50000,
-                    competition_level: competitorCount > 8 ? 'High' : competitorCount > 5 ? 'Medium' : 'Low',
-                    
-                    market_metrics: {
-                        avg_revenue_per_patient: baseRevenue + Math.floor(Math.random() * 100) - 50,
-                        patient_acquisition_cost: `£${Math.floor(Math.random() * 100) + 80}`,
-                        average_appointment_value: `£${Math.floor(Math.random() * 150) + 120}`,
-                        no_show_rate: Math.floor(Math.random() * 10) + 8
-                    },
-                    
-                    patient_demographics: {
-                        avg_age: Math.floor(Math.random() * 15) + 38,
-                        avg_household_income: `£${baseIncome.toLocaleString()}`,
-                        insurance_mix: {
-                            private: Math.floor(Math.random() * 40) + (isLondon ? 60 : 40),
-                            nhs: Math.floor(Math.random() * 30) + 30
-                        }
-                    },
-                    
-                    competitors: generateCompetitors(competitorCount, isLondon),
-                    
-                    pricing_data: [
-                        {
-                            treatment: "Invisalign",
-                            market_average: isLondon ? "£3,850" : "£3,200",
-                            trend: Math.random() > 0.6 ? 'up' : Math.random() > 0.3 ? 'stable' : 'down',
-                            trend_percentage: `${Math.floor(Math.random() * 10) + 2}%`
-                        },
-                        {
-                            treatment: "Dental Implants", 
-                            market_average: isLondon ? "£3,400" : "£2,800",
-                            trend: Math.random() > 0.7 ? 'up' : 'stable',
-                            trend_percentage: `${Math.floor(Math.random() * 8) + 1}%`
-                        },
-                        {
-                            treatment: "Teeth Whitening",
-                            market_average: isLondon ? "£550" : "£420",
-                            trend: 'up',
-                            trend_percentage: `${Math.floor(Math.random() * 15) + 5}%`
-                        }
-                    ],
-                    
-                    service_gaps: generateServiceGaps(isLondon, competitorCount),
-                    
-                    strategic_recommendations: generateRecommendations(postcode, isLondon, competitorCount),
-                    
-                    market_risks: generateMarketRisks(competitorCount, isLondon)
-                };
-            });
-        }
-
-        function generateCompetitors(count, isLondon) {
-            const practiceNames = [
-                "SmileCare Dental", "Premier Dental Practice", "City Dental Centre", 
-                "Bright Smile Clinic", "Elite Dental Practice", "Modern Dentistry", 
-                "Family Dental Care", "Dental Excellence", "Urban Dental Studio"
-            ];
-            const specialties = [
-                ["General Dentistry", "Cosmetics"], ["Orthodontics", "Implants"], 
-                ["General Dentistry"], ["Cosmetics", "Whitening"], ["Implants", "Oral Surgery"],
-                ["Invisalign", "Cosmetics"], ["General Dentistry", "Periodontics"]
-            ];
-            
-            return Array.from({length: count}, (_, i) => ({
-                name: practiceNames[i % practiceNames.length] + (i > 8 ? ` ${Math.floor(i/9) + 1}` : ''),
-                distance: (Math.random() * 2 + 0.2).toFixed(1),
-                rating: (Math.random() * 1.5 + 3.5).toFixed(1),
-                review_count: Math.floor(Math.random() * 500) + 50,
-                estimated_patients: Math.floor(Math.random() * 200) + (isLondon ? 150 : 100),
-                specialties: specialties[Math.floor(Math.random() * specialties.length)],
-                competitive_advantages: generateCompetitiveAdvantages()
-            }));
-        }
-
-        function generateCompetitiveAdvantages() {
-            const advantages = [
-                "Extended evening hours", "Same-day appointments", "Advanced technology",
-                "Specialist team", "Payment plans", "Premium location", "Corporate backing",
-                "Long establishment", "Strong online presence", "Sedation dentistry"
-            ];
-            const count = Math.floor(Math.random() * 3) + 1;
-            return advantages.sort(() => 0.5 - Math.random()).slice(0, count);
-        }
-
-        function generateServiceGaps(isLondon, competitorCount) {
-            const gaps = [
-                {
-                    service: "Emergency Dental Care",
-                    demand_level: "High",
-                    current_supply: "Limited",
-                    opportunity_value: "£45k/year"
-                },
-                {
-                    service: "Pediatric Dentistry", 
-                    demand_level: competitorCount < 4 ? "High" : "Medium",
-                    current_supply: competitorCount < 4 ? "Undersupplied" : "Adequate",
-                    opportunity_value: "£35k/year"
-                },
-                {
-                    service: "Dental Anxiety Management",
-                    demand_level: "Medium",
-                    current_supply: "Limited",
-                    opportunity_value: "£25k/year"
-                }
-            ];
-            return gaps.slice(0, Math.floor(Math.random() * 3) + 1);
-        }
-
-        function generateRecommendations(postcode, isLondon, competitorCount) {
-            const recommendations = [];
-            
-            if (competitorCount < 4) {
-                recommendations.push("Consider premium positioning - limited competition allows for higher pricing");
-            }
-            if (isLondon) {
-                recommendations.push("Focus on cosmetic treatments - high disposable income demographic");
-                recommendations.push("Implement extended hours to capture working professionals");
-            }
-            if (competitorCount > 7) {
-                recommendations.push("Differentiate with specialized services (sedation, emergency care)");
-                recommendations.push("Invest heavily in online presence and patient acquisition");
-            }
-            
-            recommendations.push("Target Invisalign marketing - high demand, good margins in this area");
-            
-            return recommendations.slice(0, 3);
-        }
-
-        function generateMarketRisks(competitorCount, isLondon) {
-            const risks = [];
-            
-            if (competitorCount > 6) {
-                risks.push("High competition may pressure pricing and patient acquisition costs");
-            }
-            if (isLondon) {
-                risks.push("High commercial rents may impact profitability margins");
-            }
-            
-            risks.push("Economic downturn could reduce demand for elective cosmetic procedures");
-            
-            if (Math.random() > 0.5) {
-                risks.push("New corporate dental chains entering the market");
-            }
-            
-            return risks.slice(0, 2);
-        }",
-                    priority: insight.demographic_score > 70 ? 9 : 6
-                },
-                {
-                    name: "Composite Bonding",
-                    details: "Ages 20-40 • Middle Income • Budget-Friendly Cosmetics",
-                    demand: "Medium",
-                    priority: income === 'medium' ? 8 : 5
-                },
-                {
-                    name: "Veneers / Smile Makeovers",
-                    details: "Ages 25-50 • High Income • Premium Cosmetics",
-                    demand: "High",
-                    priority: income === 'high' ? 9 : 3
-                }
-            ];
-            const adjustedTreatments = treatmentDatabase.map(treatment => {
-                let adjustedPriority = treatment.priority;
-                if (income === 'high' && ['Invisalign / Clear Aligners', 'Dental Implants', 'Veneers / Smile Makeovers'].includes(treatment.name)) {
-                    adjustedPriority += 2;
-                }
-                if (income === 'medium' && treatment.name === 'Composite Bonding') {
-                    adjustedPriority += 1;
-                }
-                if (competition === 'high' && ['Invisalign / Clear Aligners', 'Veneers / Smile Makeovers'].includes(treatment.name)) {
-                    adjustedPriority -= 1;
-                }
-                return {
-                    ...treatment,
-                    adjustedPriority
-                };
-            });
-            return adjustedTreatments
-                .sort((a, b) => b.adjustedPriority - a.adjustedPriority)
-                .slice(0, 5);
-        }
+        
         document.getElementById('postcodeInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 analyzePostcodes();
@@ -1774,344 +1214,3 @@ async def read_root():
     </script>
 </body>
 </html>""")
-
-@app.get("/api/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy", 
-        "service": "Smile IQ API",
-        "backend_loaded": dental_api is not None,
-        "port": os.environ.get("PORT", "8080"),
-        "message": "API is running successfully"
-    }
-
-@app.post("/api/analyze")
-async def analyze_postcodes(
-    request: PostcodeRequest, 
-    client_ip: str = Depends(rate_limit_dependency),
-    api_key_valid: bool = Depends(validate_api_key)
-):
-    """Analyze dental market for given postcodes"""
-    # For demo purposes, generate enhanced dummy data instead of requiring backend service
-    try:
-        logger.info(f"Analyzing postcodes: {request.postcodes} from IP: {client_ip}")
-        
-        # Security: Additional input validation
-        if len(request.postcodes) > 10:
-            raise HTTPException(status_code=400, detail="Maximum 10 postcodes allowed per request")
-        
-        # Generate enhanced dummy data for demo
-        dummy_insights = generate_dummy_insights(request.postcodes)
-        
-        return {
-            "status": "success",
-            "insights": dummy_insights,
-            "practices_found": sum(len(insight["competitors"]) for insight in dummy_insights) + len(dummy_insights),
-            "message": "Analysis completed successfully"
-        }
-        
-    except ValueError as e:
-        logger.warning(f"Validation error for postcodes {request.postcodes}: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
-    except Exception as e:
-        logger.error(f"Analysis error for postcodes {request.postcodes}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Analysis service temporarily unavailable")
-
-def generate_dummy_insights(postcodes: List[str]) -> List[dict]:
-    """Generate realistic dummy data for demo purposes"""
-    import random
-    
-    insights = []
-    
-    for postcode in postcodes:
-        # Determine location type for realistic data
-        is_london = postcode.startswith(('SW', 'W', 'E', 'N', 'SE', 'NW'))
-        is_manchester = postcode.startswith('M')
-        is_birmingham = postcode.startswith('B')
-        
-        # Base metrics on location
-        base_revenue = 320 if is_london else 280 if is_manchester else 250
-        base_income = 65000 if is_london else 45000 if is_manchester else 42000
-        competitor_count = random.randint(5, 12) if is_london else random.randint(2, 7)
-        
-        insight = {
-            "postcode": postcode,
-            "practice_density": round(random.uniform(2.1, 8.5), 1),
-            "demographic_score": random.randint(60, 95),
-            "growth_potential": random.randint(65, 90),
-            "competition_level": "High" if competitor_count > 8 else "Medium" if competitor_count > 5 else "Low",
-            "opportunity_score": random.randint(60, 95),
-            "opportunity_value": random.randint(50000, 150000),
-            
-            "market_metrics": {
-                "avg_revenue_per_patient": base_revenue + random.randint(-50, 100),
-                "patient_acquisition_cost": f"£{random.randint(80, 180)}",
-                "average_appointment_value": f"£{random.randint(120, 270)}",
-                "no_show_rate": random.randint(8, 18)
-            },
-            
-            "patient_demographics": {
-                "avg_age": random.randint(38, 53),
-                "avg_household_income": f"£{base_income + random.randint(-10000, 20000):,}",
-                "insurance_mix": {
-                    "private": random.randint(40, 80) if is_london else random.randint(30, 65),
-                    "nhs": random.randint(20, 60)
-                }
-            },
-            
-            "competitors": generate_dummy_competitors(competitor_count, is_london),
-            
-            "pricing_data": [
-                {
-                    "treatment": "Invisalign",
-                    "market_average": "£3,850" if is_london else "£3,200",
-                    "trend": random.choice(["up", "stable", "down"]),
-                    "trend_percentage": f"{random.randint(2, 12)}%"
-                },
-                {
-                    "treatment": "Dental Implants",
-                    "market_average": "£3,400" if is_london else "£2,800", 
-                    "trend": random.choice(["up", "stable"]),
-                    "trend_percentage": f"{random.randint(1, 8)}%"
-                },
-                {
-                    "treatment": "Teeth Whitening",
-                    "market_average": "£550" if is_london else "£420",
-                    "trend": "up",
-                    "trend_percentage": f"{random.randint(5, 20)}%"
-                }
-            ],
-            
-            "service_gaps": generate_dummy_service_gaps(competitor_count),
-            
-            "strategic_recommendations": generate_dummy_recommendations(postcode, is_london, competitor_count),
-            
-            "market_risks": generate_dummy_risks(competitor_count, is_london),
-            
-            # Legacy fields for compatibility
-            "risk_factors": generate_dummy_risks(competitor_count, is_london),
-            "opportunities": generate_dummy_recommendations(postcode, is_london, competitor_count)
-        }
-        
-        insights.append(insight)
-    
-    return insights
-
-def generate_dummy_competitors(count: int, is_london: bool) -> List[dict]:
-    """Generate dummy competitor data"""
-    import random
-    
-    practice_names = [
-        "SmileCare Dental", "Premier Dental Practice", "City Dental Centre",
-        "Bright Smile Clinic", "Elite Dental Practice", "Modern Dentistry",
-        "Family Dental Care", "Dental Excellence", "Urban Dental Studio",
-        "Perfect Smile Clinic", "Advance Dental Care", "Gentle Dental Practice"
-    ]
-    
-    specialties_options = [
-        ["General Dentistry", "Cosmetics"],
-        ["Orthodontics", "Implants"],
-        ["General Dentistry"],
-        ["Cosmetics", "Whitening"],
-        ["Implants", "Oral Surgery"],
-        ["Invisalign", "Cosmetics"],
-        ["General Dentistry", "Periodontics"],
-        ["Emergency Dentistry", "General"]
-    ]
-    
-    advantages_pool = [
-        "Extended evening hours", "Same-day appointments", "Advanced technology",
-        "Specialist team", "Payment plans", "Premium location", "Corporate backing",
-        "Long establishment", "Strong online presence", "Sedation dentistry",
-        "Digital dentistry", "Multi-language staff"
-    ]
-    
-    competitors = []
-    for i in range(count):
-        name = practice_names[i % len(practice_names)]
-        if i >= len(practice_names):
-            name += f" {i // len(practice_names) + 1}"
-            
-        competitors.append({
-            "name": name,
-            "distance": f"{random.uniform(0.2, 3.0):.1f}",
-            "rating": f"{random.uniform(3.5, 5.0):.1f}",
-            "review_count": random.randint(50, 500),
-            "estimated_patients": random.randint(100, 250) + (50 if is_london else 0),
-            "specialties": random.choice(specialties_options),
-            "competitive_advantages": random.sample(advantages_pool, random.randint(1, 3))
-        })
-    
-    return competitors
-
-def generate_dummy_service_gaps(competitor_count: int) -> List[dict]:
-    """Generate dummy service gap data"""
-    import random
-    
-    all_gaps = [
-        {
-            "service": "Emergency Dental Care",
-            "demand_level": "High",
-            "current_supply": "Limited",
-            "opportunity_value": "£45k/year"
-        },
-        {
-            "service": "Pediatric Dentistry",
-            "demand_level": "High" if competitor_count < 4 else "Medium",
-            "current_supply": "Undersupplied" if competitor_count < 4 else "Adequate",
-            "opportunity_value": "£35k/year"
-        },
-        {
-            "service": "Dental Anxiety Management",
-            "demand_level": "Medium",
-            "current_supply": "Limited",
-            "opportunity_value": "£25k/year"
-        },
-        {
-            "service": "Same-Day Dentistry",
-            "demand_level": "High",
-            "current_supply": "Limited",
-            "opportunity_value": "£30k/year"
-        }
-    ]
-    
-    return random.sample(all_gaps, random.randint(1, 3))
-
-def generate_dummy_recommendations(postcode: str, is_london: bool, competitor_count: int) -> List[str]:
-    """Generate dummy strategic recommendations"""
-    import random
-    
-    recommendations = []
-    
-    if competitor_count < 4:
-        recommendations.append("Consider premium positioning - limited competition allows for higher pricing")
-    
-    if is_london:
-        recommendations.extend([
-            "Focus on cosmetic treatments - high disposable income demographic",
-            "Implement extended hours to capture working professionals"
-        ])
-    
-    if competitor_count > 7:
-        recommendations.extend([
-            "Differentiate with specialized services (sedation, emergency care)",
-            "Invest heavily in online presence and patient acquisition"
-        ])
-    
-    recommendations.extend([
-        "Target Invisalign marketing - high demand, good margins in this area",
-        "Develop partnerships with local healthcare providers",
-        "Consider implementing digital dentistry solutions",
-        "Focus on patient experience and comfort amenities"
-    ])
-    
-    return random.sample(recommendations, min(3, len(recommendations)))
-
-def generate_dummy_risks(competitor_count: int, is_london: bool) -> List[str]:
-    """Generate dummy market risks"""
-    import random
-    
-    risks = []
-    
-    if competitor_count > 6:
-        risks.append("High competition may pressure pricing and patient acquisition costs")
-    
-    if is_london:
-        risks.append("High commercial rents may impact profitability margins")
-    
-    risks.extend([
-        "Economic downturn could reduce demand for elective cosmetic procedures",
-        "NHS policy changes may affect patient flow",
-        "Rising staff costs in competitive dental market"
-    ])
-    
-    if random.random() > 0.5:
-        risks.append("New corporate dental chains entering the market")
-    
-    return random.sample(risks, min(2, len(risks)))
-
-@app.get("/api/postcode/{postcode}")
-async def get_postcode_summary(
-    postcode: str, 
-    client_ip: str = Depends(rate_limit_dependency),
-    api_key_valid: bool = Depends(validate_api_key)
-):
-    """Get detailed summary for specific postcode"""
-    if not dental_api:
-        logger.error("Backend analysis service not available")
-        raise HTTPException(status_code=503, detail="Backend analysis service not available")
-    
-    try:
-        # Security: Input validation and sanitization
-        clean_postcode = postcode.strip().upper()
-        
-        if len(clean_postcode) > 10:
-            raise HTTPException(status_code=400, detail="Invalid postcode length")
-            
-        if not UK_POSTCODE_REGEX.match(clean_postcode):
-            raise HTTPException(status_code=400, detail="Invalid UK postcode format")
-        
-        logger.info(f"Getting summary for postcode: {clean_postcode} from IP: {client_ip}")
-        
-        summary = dental_api.get_postcode_summary(clean_postcode)
-        
-        if 'error' in summary:
-            raise HTTPException(status_code=404, detail=summary['error'])
-            
-        return summary
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Summary error for postcode {postcode}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Summary service temporarily unavailable")
-
-# Security: Serve static files securely if directory exists
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# Security: Custom error handlers to prevent information disclosure
-@app.exception_handler(404)
-async def not_found_handler(request: Request, exc):
-    return HTMLResponse(
-        content="<html><body><h1>404 - Page Not Found</h1></body></html>",
-        status_code=404
-    )
-
-@app.exception_handler(500)
-async def internal_server_error_handler(request: Request, exc):
-    logger.error(f"Internal server error: {exc}")
-    return HTMLResponse(
-        content="<html><body><h1>500 - Internal Server Error</h1></body></html>",
-        status_code=500
-    )
-
-# This is crucial for Railway deployment
-if __name__ == "__main__":
-    import uvicorn
-    
-    # Security: Validate environment configuration
-    port = int(os.environ.get("PORT", 8080))
-    
-    # Security: Different configurations for different environments
-    if os.environ.get("ENVIRONMENT") == "production":
-        log_level = "warning"
-        access_log = False
-    else:
-        log_level = "info"
-        access_log = True
-    
-    logger.info(f"🚀 Starting Smile IQ server on 0.0.0.0:{port}")
-    logger.info(f"🔒 Security features enabled: Rate limiting, Input validation, Security headers")
-    
-    uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=port, 
-        log_level=log_level,
-        access_log=access_log,
-        # Security: Production settings
-        server_header=False,  # Hide server header
-        date_header=False     # Hide date header
-    )
