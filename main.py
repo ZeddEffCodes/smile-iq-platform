@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, validator, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 import os
 import logging
@@ -143,9 +143,10 @@ async def validate_api_key(credentials: HTTPAuthorizationCredentials = Depends(s
     return True
 
 class PostcodeRequest(BaseModel):
-    postcodes: List[str] = Field(..., min_items=1, max_items=10)  # Security: Limit array size
+    postcodes: List[str] = Field(..., min_length=1, max_length=10)  # Security: Limit array size
     
-    @validator('postcodes')
+    @field_validator('postcodes')
+    @classmethod
     def validate_postcodes(cls, v):
         """Security: Validate postcode format and sanitize input"""
         if not v:
